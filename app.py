@@ -133,7 +133,13 @@ class User(UserMixin):
     @property
     def is_premium(self):
         if self.premium_until:
-            return datetime.strptime(self.premium_until, '%Y-%m-%d %H:%M:%S') > datetime.now()
+            try:
+                # Tenta converter a string do banco de dados para datetime
+                premium_date = datetime.strptime(self.premium_until, '%Y-%m-%d %H:%M:%S')
+                return premium_date > datetime.now()
+            except ValueError:
+                # Se a conversão falhar (ex: string vazia ou formato incorreto), não é premium
+                return False
         return False
 
 @login_manager.user_loader
@@ -254,6 +260,11 @@ def login():
         
         # Faz login
         user = load_user(user_row['id']) # Recarrega para pegar o premium_until
+        
+        # Garante que premium_until seja None se for string vazia (problema comum com SQLite/Flask)
+        if user.premium_until == '':
+            user.premium_until = None
+            
         login_user(user)
         flash('Login realizado com sucesso!', 'success')
         return redirect(url_for('dashboard'))
