@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bite Encurta - Encurtador de URLs Inteligente</title>
+    <title>Bite Encurta - Encurtador de URLs Simples</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -106,27 +106,47 @@
             color: #666;
             font-weight: 500;
         }
-        .info-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            text-align: center;
+        form { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
         }
-        .info-box h3 {
-            margin-bottom: 10px;
-            font-size: 20px;
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
-        .info-box p {
+        label {
+            color: #555;
+            font-weight: 500;
             font-size: 14px;
-            opacity: 0.95;
-            line-height: 1.6;
         }
-        .info-box a {
-            color: white;
-            text-decoration: underline;
+        input[type="url"] { 
+            padding: 15px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        input[type="url"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        input[type="submit"] { 
+            padding: 16px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer;
+            font-size: 16px;
             font-weight: 600;
+            transition: transform 0.2s;
+        }
+        input[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
         }
         .message { 
             padding: 15px; 
@@ -155,10 +175,49 @@
             color: #721c24; 
             border: 2px solid #f5c6cb; 
         }
+        .result {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        .result h3 {
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .result .url-box {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
         .result a { 
-            word-break: break-all; 
-            color: #667eea;
+            color: white;
             font-weight: 600;
+            text-decoration: underline;
+        }
+        .info-box {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 25px;
+            text-align: center;
+            border: 2px solid #b8daff;
+        }
+        .info-box p {
+            color: #004085;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .info-box a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .info-box a:hover {
+            text-decoration: underline;
         }
         .footer {
             text-align: center;
@@ -191,19 +250,18 @@
         <div class="nav-links">
             <a href="/api/docs">API</a>
             <a href="/login">Login</a>
-            <a href="/register">Cadastrar</a>
         </div>
     </div>
 
     <div class="main-content">
         <div class="container">
-            <h1>Encurtador de URLs Inteligente</h1>
-            <p class="subtitle">Encurte, compartilhe e acompanhe seus links com facilidade</p>
+            <h1>Encurtador de URLs</h1>
+            <p class="subtitle">Rápido, simples e gratuito</p>
 
             <div class="features">
                 <div class="feature">
                     <div class="feature-icon">⚡</div>
-                    <div class="feature-text">Rápido e Grátis</div>
+                    <div class="feature-text">Sem Cadastro</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">📊</div>
@@ -211,37 +269,54 @@
                 </div>
                 <div class="feature">
                     <div class="feature-icon">🔒</div>
-                    <div class="feature-text">Análise de Segurança</div>
+                    <div class="feature-text">Seguro</div>
                 </div>
             </div>
 
-            {% if error %}
-                <div class="message error">{{ error }}</div>
-            {% endif %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
             {% if short_url %}
-                <div class="message success result">
-                    <p><strong>✅ Link Encurtado com Sucesso!</strong></p>
-                    <p style="margin-top: 10px;">URL Curta: <a href="{{ short_url }}" target="_blank">{{ short_url }}</a></p>
-                    <p style="margin-top: 5px;">Estatísticas: <a href="{{ stats_url }}" target="_blank">{{ stats_url }}</a></p>
-                </div>
-            {% else %}
-                <div class="info-box">
-                    <h3>🎯 Crie Links Encurtados Grátis!</h3>
-                    <p>
-                        Para criar links encurtados com acesso ao painel de gerenciamento e estatísticas completas, 
-                        <a href="/register">cadastre-se gratuitamente</a> ou faça <a href="/login">login</a>.
-                    </p>
-                    <p style="margin-top: 10px;">
-                        💡 Também temos uma <a href="/api/docs">API pública</a> para desenvolvedores!
-                    </p>
+                <div class="result">
+                    <h3>✅ Link Encurtado!</h3>
+                    <p><strong>URL Curta:</strong></p>
+                    <div class="url-box">
+                        <a href="{{ short_url }}" target="_blank">{{ short_url }}</a>
+                    </div>
+                    <p><strong>Estatísticas:</strong></p>
+                    <div class="url-box">
+                        <a href="{{ stats_url }}" target="_blank">{{ stats_url }}</a>
+                    </div>
                 </div>
             {% endif %}
+
+            <form action="/shorten" method="post">
+                <div class="form-group">
+                    <label for="original_url">Cole sua URL aqui:</label>
+                    <input type="url" id="original_url" name="original_url" required 
+                           placeholder="https://exemplo.com/sua-url-muito-longa"
+                           value="{{ original_url if original_url else '' }}">
+                </div>
+
+                <input type="submit" value="Encurtar Agora">
+            </form>
+
+            <div class="info-box">
+                <p>
+                    💡 <strong>Quer criar links personalizados?</strong><br>
+                    Faça <a href="/login">login com seu email</a> para criar links com alias personalizados e gerenciar todos os seus links!
+                </p>
+            </div>
         </div>
     </div>
 
     <div class="footer">
-        Desenvolvido com 💜 por Bite Encurta | <a href="/api/docs">Documentação da API</a>
+        Desenvolvido com 💜 por Bite Encurta | <a href="/api/docs">API</a> | <a href="/login">Login</a>
     </div>
 </body>
 </html>

@@ -1,19 +1,16 @@
 import sqlite3
 import string
 import random
-import time
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask, request, redirect, render_template, abort, g, jsonify, session, flash, url_for
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from flask_bcrypt import Bcrypt
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 # --- Configuração ---
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-' + str(random.randint(1000, 9999))
-bcrypt = Bcrypt(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -21,6 +18,7 @@ login_manager.login_view = 'login'
 DATABASE = 'shortener.db'
 FREE_CODE_LENGTH = 6
 ACCESS_CODE_LENGTH = 8
+ADMIN_PASSWORD = 'sakibites' # Senha de administrador para ações sensíveis
 
 # --- Funções de Banco de Dados ---
 
@@ -41,13 +39,13 @@ def init_db():
     with app.app_context():
         db = get_db()
         
-        # Tabela de usuários
+        # Tabela de usuários (apenas email, sem senha)
         db.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
                 is_admin INTEGER DEFAULT 0,
+                premium_until TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -101,17 +99,24 @@ with app.app_context():
 
 # --- User Model para Flask-Login ---
 class User(UserMixin):
-    def __init__(self, id, email, is_admin):
+    def __init__(self, id, email, is_admin, premium_until):
         self.id = id
         self.email = email
         self.is_admin = is_admin
+        self.premium_until = premium_until
+        
+    @property
+    def is_premium(self):
+        if self.premium_until:
+            return datetime.strptime(self.premium_until, '%Y-%m-%d %H:%M:%S') > datetime.now()
+        return False
 
 @login_manager.user_loader
 def load_user(user_id):
     db = get_db()
     user_row = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if user_row:
-        return User(user_row['id'], user_row['email'], user_row['is_admin'])
+        return User(user_row['id'], user_row['email'], user_row['is_admin'], user_row['premium_until'])
     return None
 
 # --- Funções Auxiliares ---
@@ -202,59 +207,31 @@ def fetch_url_metadata(url):
             'description': f'Redireciona para: {url}'
         }
 
-# --- Rotas de Autenticação ---
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        password = request.form.get('password', '').strip()
-        
-        if not email or not password:
-            flash('Email e senha são obrigatórios', 'error')
-            return render_template('register.html')
-        
-        if not is_valid_email(email):
-            flash('Email inválido', 'error')
-            return render_template('register.html')
-        
-        if len(password) < 6:
-            flash('A senha deve ter pelo menos 6 caracteres', 'error')
-            return render_template('register.html')
-        
-        db = get_db()
-        
-        # Verifica se o email já existe
-        if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
-            flash('Este email já está cadastrado', 'error')
-            return render_template('register.html')
-        
-        # Cria o usuário
-        password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-        db.execute("INSERT INTO users (email, password_hash) VALUES (?, ?)", (email, password_hash))
-        db.commit()
-        
-        flash('Cadastro realizado com sucesso! Faça login.', 'success')
-        return redirect(url_for('login'))
-    
-    return render_template('register.html')
+# --- Rotas de Autenticação (Simplificada - Apenas Email) ---
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
-        password = request.form.get('password', '').strip()
+        
+        if not email or not is_valid_email(email):
+            flash('Email inválido', 'error')
+            return render_template('login.html')
         
         db = get_db()
         user_row = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
         
-        if user_row and bcrypt.check_password_hash(user_row['password_hash'], password):
-            user = User(user_row['id'], user_row['email'], user_row['is_admin'])
-            login_user(user)
-            flash('Login realizado com sucesso!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Email ou senha incorretos', 'error')
+        # Se o usuário não existe, cria automaticamente
+        if not user_row:
+            db.execute("INSERT INTO users (email) VALUES (?)", (email,))
+            db.commit()
+            user_row = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        
+        # Faz login
+        user = load_user(user_row['id']) # Recarrega para pegar o premium_until
+        login_user(user)
+        flash('Login realizado com sucesso!', 'success')
+        return redirect(url_for('dashboard'))
     
     return render_template('login.html')
 
@@ -271,6 +248,98 @@ def logout():
 def index():
     return render_template('index.html')
 
+@app.route('/shorten', methods=['POST'])
+def shorten():
+    """
+    Rota para encurtar URLs - FUNCIONA SEM LOGIN
+    Se tiver login, vincula ao usuário
+    Se quiser alias personalizado, precisa de login + token OU ser premium
+    """
+    original_url = request.form['original_url']
+    custom_alias = request.form.get('custom_alias', '').strip()
+    token = request.form.get('token', '').strip()
+
+    db = get_db()
+    short_code = None
+    token_used = None
+    user_id = current_user.id if current_user.is_authenticated else None
+
+    # 1. Link com alias personalizado (REQUER LOGIN + TOKEN OU PREMIUM)
+    if custom_alias:
+        if not current_user.is_authenticated:
+            flash('Para criar links personalizados, você precisa fazer login.', 'error')
+            return redirect(url_for('index'))
+        
+        # Verifica se o usuário é premium (tokens ilimitados)
+        is_premium = current_user.is_premium
+        
+        if not is_premium and not token:
+            flash('Para usar alias personalizado, você precisa de um token ou ser premium.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Se não for premium, verifica o token de uso único
+        if not is_premium:
+            # Verifica se o token é válido e pertence ao usuário
+            token_row = db.execute("""
+                SELECT * FROM tokens 
+                WHERE token_value = ? AND used = 0 AND user_id = ?
+            """, (token, current_user.id)).fetchone()
+            
+            if not token_row:
+                flash('Token inválido ou já utilizado.', 'error')
+                return redirect(url_for('dashboard'))
+            
+            token_used = token
+            # Marca o token como usado
+            db.execute("UPDATE tokens SET used = 1 WHERE token_value = ?", (token,))
+            db.commit()
+
+        # Verifica se o alias já existe
+        if db.execute("SELECT id FROM urls WHERE short_code = ?", (custom_alias,)).fetchone():
+            flash(f"O alias '{custom_alias}' já está em uso.", 'error')
+            return redirect(url_for('dashboard'))
+
+        short_code = custom_alias
+        
+
+    # 2. Link normal (FUNCIONA SEM LOGIN)
+    else:
+        # Gera um código aleatório único
+        while True:
+            short_code = generate_short_code()
+            if not db.execute("SELECT id FROM urls WHERE short_code = ?", (short_code,)).fetchone():
+                break
+
+    # 3. Salva a URL no banco de dados
+    if short_code:
+        access_code = generate_access_code()
+        try:
+            db.execute("""
+                INSERT INTO urls (short_code, original_url, custom_alias, token_used, access_code, user_id, created_via)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (short_code, original_url, custom_alias if custom_alias else None, token_used, access_code, user_id, 'web'))
+            db.commit()
+            
+            # URL base
+            base_url = request.host_url.rstrip('/')
+            short_url = f"{base_url}/{short_code}"
+            stats_url = f"{base_url}/stats/{access_code}"
+            
+            # Se estiver logado, redireciona para dashboard
+            if current_user.is_authenticated:
+                flash('Link encurtado com sucesso!', 'success')
+                return redirect(url_for('dashboard'))
+            
+            # Se não estiver logado, mostra na página inicial
+            return render_template('index.html', short_url=short_url, stats_url=stats_url)
+            
+        except sqlite3.IntegrityError:
+            flash('Erro ao gerar código curto. Tente novamente.', 'error')
+            return redirect(url_for('index'))
+
+    flash('Ocorreu um erro desconhecido.', 'error')
+    return redirect(url_for('index'))
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -283,80 +352,16 @@ def dashboard():
         ORDER BY created_at DESC
     """, (current_user.id,)).fetchall()
     
-    # Busca tokens do usuário
-    user_tokens = db.execute("""
-        SELECT * FROM tokens 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC
-    """, (current_user.id,)).fetchall()
+    # Busca tokens do usuário (apenas se não for premium)
+    user_tokens = []
+    if not current_user.is_premium:
+        user_tokens = db.execute("""
+            SELECT * FROM tokens 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        """, (current_user.id,)).fetchall()
     
     return render_template('dashboard.html', links=user_links, tokens=user_tokens)
-
-@app.route('/shorten', methods=['POST'])
-@login_required
-def shorten():
-    original_url = request.form['original_url']
-    custom_alias = request.form.get('custom_alias', '').strip()
-    token = request.form.get('token', '').strip()
-
-    db = get_db()
-    short_code = None
-    token_used = None
-
-    # 1. Encurtamento Premium (com token e alias personalizado)
-    if custom_alias and token:
-        # Verifica se o token é válido e pertence ao usuário
-        token_row = db.execute("""
-            SELECT * FROM tokens 
-            WHERE token_value = ? AND used = 0 AND user_id = ?
-        """, (token, current_user.id)).fetchone()
-        
-        if not token_row:
-            flash('Token inválido ou já utilizado.', 'error')
-            return redirect(url_for('dashboard'))
-
-        # Verifica se o alias personalizado já existe
-        if db.execute("SELECT id FROM urls WHERE short_code = ?", (custom_alias,)).fetchone():
-            flash(f"O alias '{custom_alias}' já está em uso.", 'error')
-            return redirect(url_for('dashboard'))
-
-        short_code = custom_alias
-        token_used = token
-        
-        # Marca o token como usado
-        db.execute("UPDATE tokens SET used = 1 WHERE token_value = ?", (token,))
-        db.commit()
-
-    # 2. Encurtamento Free (código aleatório)
-    elif not custom_alias and not token:
-        # Gera um código aleatório único
-        while True:
-            short_code = generate_short_code()
-            if not db.execute("SELECT id FROM urls WHERE short_code = ?", (short_code,)).fetchone():
-                break
-    
-    else:
-        flash('Para usar um alias personalizado, você deve fornecer um token válido.', 'error')
-        return redirect(url_for('dashboard'))
-
-    # 3. Salva a URL no banco de dados
-    if short_code:
-        access_code = generate_access_code()
-        try:
-            db.execute("""
-                INSERT INTO urls (short_code, original_url, custom_alias, token_used, access_code, user_id, created_via)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (short_code, original_url, custom_alias if custom_alias else None, token_used, access_code, current_user.id, 'web'))
-            db.commit()
-            
-            flash('Link encurtado com sucesso!', 'success')
-            return redirect(url_for('dashboard'))
-        except sqlite3.IntegrityError:
-            flash('Erro ao gerar código curto. Tente novamente.', 'error')
-            return redirect(url_for('dashboard'))
-
-    flash('Ocorreu um erro desconhecido.', 'error')
-    return redirect(url_for('dashboard'))
 
 # --- API Pública ---
 
@@ -424,7 +429,7 @@ def api_docs():
     """Documentação da API"""
     return render_template('api_docs.html')
 
-# --- Rotas de Redirecionamento ---
+# --- Rotas de Redirecionamento (Mantidas) ---
 
 @app.route('/<short_code>')
 def redirect_to_url(short_code):
@@ -546,9 +551,15 @@ def admin_panel():
 @login_required
 def admin_generate_token():
     if not current_user.is_admin:
-        return jsonify({'error': 'Acesso negado'}), 403
+        flash('Acesso negado. Apenas administradores.', 'error')
+        return redirect(url_for('dashboard'))
     
     user_email = request.form.get('user_email', '').strip()
+    admin_pass = request.form.get('admin_password', '').strip()
+    
+    if admin_pass != ADMIN_PASSWORD:
+        flash('Senha de Administrador incorreta.', 'error')
+        return redirect(url_for('admin_panel'))
     
     db = get_db()
     
@@ -559,20 +570,30 @@ def admin_generate_token():
         flash(f'Usuário com email {user_email} não encontrado', 'error')
         return redirect(url_for('admin_panel'))
     
-    # Gera token
-    new_token = generate_random_string(16)
-    db.execute("INSERT INTO tokens (token_value, token_type, user_id) VALUES (?, ?, ?)", 
-               (new_token, 'premium', user_row['id']))
+    # Define a data de expiração (30 dias a partir de agora)
+    premium_until = datetime.now() + timedelta(days=30)
+    premium_until_str = premium_until.strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Atualiza o usuário para premium
+    db.execute("UPDATE users SET premium_until = ? WHERE id = ?", 
+               (premium_until_str, user_row['id']))
     db.commit()
     
-    flash(f'Token gerado para {user_email}: {new_token}', 'success')
+    flash(f'Usuário {user_email} promovido a Premium por 30 dias (até {premium_until.strftime("%d/%m/%Y")}).', 'success')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/make_admin/<int:user_id>', methods=['POST'])
 @login_required
 def make_admin(user_id):
     if not current_user.is_admin:
-        return jsonify({'error': 'Acesso negado'}), 403
+        flash('Acesso negado. Apenas administradores.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    admin_pass = request.form.get('admin_password', '').strip()
+    
+    if admin_pass != ADMIN_PASSWORD:
+        flash('Senha de Administrador incorreta.', 'error')
+        return redirect(url_for('admin_panel'))
     
     db = get_db()
     db.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (user_id,))
@@ -584,7 +605,11 @@ def make_admin(user_id):
 @app.route('/dashboard/generate_token', methods=['POST'])
 @login_required
 def user_generate_token():
-    """Permite que usuários gerem seus próprios tokens"""
+    """Permite que usuários gerem seus próprios tokens (se não forem premium)"""
+    if current_user.is_premium:
+        flash('Você é um usuário Premium e tem tokens ilimitados!', 'info')
+        return redirect(url_for('dashboard'))
+        
     db = get_db()
     
     # Gera token para o usuário atual

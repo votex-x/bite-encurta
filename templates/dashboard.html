@@ -144,6 +144,11 @@
             color: #721c24; 
             border: 1px solid #f5c6cb; 
         }
+        .info {
+            background: #e7f3ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -176,6 +181,11 @@
             background: #fff3cd;
             color: #856404;
         }
+        .badge-premium {
+            background: #ffc107;
+            color: #333;
+            font-weight: 700;
+        }
         .link-url {
             color: #667eea;
             text-decoration: none;
@@ -203,6 +213,16 @@
         .generate-token-form {
             margin-top: 15px;
         }
+        .premium-status {
+            background: #ffc107;
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+            border: 2px solid #ff9800;
+        }
     </style>
 </head>
 <body>
@@ -224,13 +244,26 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="message {{ category }}">{{ message }}</div>
+                    <div class="message {{ category }} {{ 'info' if category == 'info' else '' }}">{{ message }}</div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
+        {% if current_user.is_premium %}
+            <div class="premium-status">
+                👑 Você é um usuário **PREMIUM**! Tokens ilimitados até {{ current_user.premium_until }}.
+            </div>
+        {% endif %}
+
         <div class="card">
-            <h2>Encurtar Nova URL</h2>
+            <h2>Encurtar com Alias Personalizado</h2>
+            <p style="margin-bottom: 15px; color: #555;">
+                {% if current_user.is_premium %}
+                    Como usuário Premium, você pode usar alias personalizado sem tokens!
+                {% else %}
+                    Para usar alias personalizado, você precisa de um token disponível.
+                {% endif %}
+            </p>
             <form action="/shorten" method="post">
                 <div class="form-group">
                     <label for="original_url">URL Original:</label>
@@ -239,20 +272,23 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="custom_alias">Alias Personalizado (Opcional - Requer Token):</label>
-                        <input type="text" id="custom_alias" name="custom_alias" placeholder="meulink">
+                        <label for="custom_alias">Alias Personalizado (Obrigatório para esta seção):</label>
+                        <input type="text" id="custom_alias" name="custom_alias" required placeholder="meulink">
                     </div>
 
+                    {% if not current_user.is_premium %}
                     <div class="form-group">
-                        <label for="token">Token Premium (Opcional):</label>
-                        <input type="text" id="token" name="token" placeholder="Cole seu token aqui">
+                        <label for="token">Token Premium (Obrigatório):</label>
+                        <input type="text" id="token" name="token" required placeholder="Cole seu token aqui">
                     </div>
+                    {% endif %}
                 </div>
 
-                <input type="submit" value="Encurtar Link">
+                <input type="submit" value="Encurtar Link Personalizado">
             </form>
         </div>
 
+        {% if not current_user.is_premium %}
         <div class="card">
             <h2>Meus Tokens</h2>
             
@@ -292,6 +328,7 @@
                 </div>
             {% endif %}
         </div>
+        {% endif %}
 
         <div class="card">
             <h2>Meus Links Encurtados</h2>

@@ -49,16 +49,14 @@
             font-weight: 500;
             font-size: 14px;
         }
-        input[type="email"], 
-        input[type="password"] { 
+        input[type="email"] { 
             padding: 12px 15px; 
             border: 2px solid #e0e0e0; 
             border-radius: 8px;
             font-size: 15px;
             transition: all 0.3s;
         }
-        input[type="email"]:focus, 
-        input[type="password"]:focus {
+        input[type="email"]:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -105,12 +103,21 @@
         .links a:hover {
             text-decoration: underline;
         }
+        .info {
+            background: #e7f3ff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #004085;
+            border: 1px solid #b8daff;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="logo">🔗</div>
-        <h1>Login</h1>
+        <h1>Acesso ao Painel</h1>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -120,22 +127,20 @@
             {% endif %}
         {% endwith %}
 
+        <div class="info">
+            ℹ️ Digite seu email para acessar o painel. Se você não tiver uma conta, ela será criada automaticamente.
+        </div>
+
         <form action="/login" method="post">
             <div class="form-group">
                 <label for="email">Email:</label>
                 <input type="email" id="email" name="email" required placeholder="seu@email.com">
             </div>
 
-            <div class="form-group">
-                <label for="password">Senha:</label>
-                <input type="password" id="password" name="password" required placeholder="••••••••">
-            </div>
-
-            <input type="submit" value="Entrar">
+            <input type="submit" value="Entrar no Painel">
         </form>
 
         <div class="links">
-            <p>Não tem uma conta? <a href="/register">Cadastre-se</a></p>
             <p><a href="/">← Voltar para início</a></p>
         </div>
     </div>
