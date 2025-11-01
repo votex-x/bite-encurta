@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentação da API - Bite Encurta</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f7fa;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 26px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        h3 {
+            color: #555;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .method {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 13px;
+            margin-right: 10px;
+        }
+        .method.post {
+            background: #28a745;
+            color: white;
+        }
+        .method.get {
+            background: #007bff;
+            color: white;
+        }
+        .endpoint-url {
+            font-family: monospace;
+            font-size: 16px;
+            color: #333;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .code-block .comment {
+            color: #75715e;
+        }
+        .code-block .string {
+            color: #e6db74;
+        }
+        .code-block .keyword {
+            color: #66d9ef;
+        }
+        .code-block .number {
+            color: #ae81ff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+        .param-required {
+            color: #dc3545;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .param-optional {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .note {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .note strong {
+            color: #1976D2;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 Documentação da API</h1>
+        <p>API Pública para Encurtamento de URLs</p>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Visão Geral</h2>
+            <p>
+                A API do Bite Encurta permite que você encurte URLs programaticamente através de requisições HTTP. 
+                Esta é uma API pública que requer apenas um email válido para uso.
+            </p>
+            <div class="note">
+                <strong>📌 Nota:</strong> Esta API é totalmente gratuita e não requer autenticação complexa. 
+                Basta fornecer um email válido em cada requisição.
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Endpoint: Encurtar URL</h2>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="endpoint-url">/api/shorten</span>
+            </div>
+
+            <h3>Parâmetros (JSON)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parâmetro</th>
+                        <th>Tipo</th>
+                        <th>Obrigatório</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>url</code></td>
+                        <td>string</td>
+                        <td><span class="param-required">Obrigatório</span></td>
+                        <td>A URL completa que você deseja encurtar (deve começar com http:// ou https://)</td>
+                    </tr>
+                    <tr>
+                        <td><code>email</code></td>
+                        <td>string</td>
+                        <td><span class="param-required">Obrigatório</span></td>
+                        <td>Seu endereço de email válido</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Exemplo de Requisição (cURL)</h3>
+            <div class="code-block">
+curl -X POST https://seu-dominio.com/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://www.exemplo.com.br/artigo/muito-longo",
+    "email": "seu@email.com"
+  }'
+            </div>
+
+            <h3>Exemplo de Requisição (Python)</h3>
+            <div class="code-block">
+<span class="keyword">import</span> requests
+
+url = <span class="string">"https://seu-dominio.com/api/shorten"</span>
+data = {
+    <span class="string">"url"</span>: <span class="string">"https://www.exemplo.com.br/artigo/muito-longo"</span>,
+    <span class="string">"email"</span>: <span class="string">"seu@email.com"</span>
+}
+
+response = requests.post(url, json=data)
+result = response.json()
+
+<span class="keyword">print</span>(result[<span class="string">"short_url"</span>])
+            </div>
+
+            <h3>Exemplo de Requisição (JavaScript/Node.js)</h3>
+            <div class="code-block">
+<span class="keyword">const</span> axios = <span class="keyword">require</span>(<span class="string">'axios'</span>);
+
+<span class="keyword">async function</span> encurtarURL() {
+  <span class="keyword">const</span> response = <span class="keyword">await</span> axios.post(<span class="string">'https://seu-dominio.com/api/shorten'</span>, {
+    url: <span class="string">'https://www.exemplo.com.br/artigo/muito-longo'</span>,
+    email: <span class="string">'seu@email.com'</span>
+  });
+  
+  console.log(response.data.short_url);
+}
+
+encurtarURL();
+            </div>
+
+            <h3>Resposta de Sucesso (201 Created)</h3>
+            <div class="code-block">
+{
+  <span class="string">"success"</span>: <span class="keyword">true</span>,
+  <span class="string">"short_url"</span>: <span class="string">"https://seu-dominio.com/aB3xY9"</span>,
+  <span class="string">"stats_url"</span>: <span class="string">"https://seu-dominio.com/stats/Kj8mN2pQ"</span>,
+  <span class="string">"short_code"</span>: <span class="string">"aB3xY9"</span>,
+  <span class="string">"email"</span>: <span class="string">"seu@email.com"</span>
+}
+            </div>
+
+            <h3>Campos da Resposta</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Campo</th>
+                        <th>Tipo</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>success</code></td>
+                        <td>boolean</td>
+                        <td>Indica se a operação foi bem-sucedida</td>
+                    </tr>
+                    <tr>
+                        <td><code>short_url</code></td>
+                        <td>string</td>
+                        <td>A URL encurtada completa</td>
+                    </tr>
+                    <tr>
+                        <td><code>stats_url</code></td>
+                        <td>string</td>
+                        <td>URL para visualizar estatísticas de cliques</td>
+                    </tr>
+                    <tr>
+                        <td><code>short_code</code></td>
+                        <td>string</td>
+                        <td>O código curto gerado (6 caracteres)</td>
+                    </tr>
+                    <tr>
+                        <td><code>email</code></td>
+                        <td>string</td>
+                        <td>O email fornecido na requisição</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Possíveis Erros</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código HTTP</th>
+                        <th>Erro</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>400</td>
+                        <td>JSON inválido</td>
+                        <td>O corpo da requisição não é um JSON válido</td>
+                    </tr>
+                    <tr>
+                        <td>400</td>
+                        <td>URL e email são obrigatórios</td>
+                        <td>Faltam parâmetros obrigatórios</td>
+                    </tr>
+                    <tr>
+                        <td>400</td>
+                        <td>Email inválido</td>
+                        <td>O formato do email está incorreto</td>
+                    </tr>
+                    <tr>
+                        <td>400</td>
+                        <td>URL deve começar com http:// ou https://</td>
+                        <td>A URL fornecida não possui protocolo válido</td>
+                    </tr>
+                    <tr>
+                        <td>500</td>
+                        <td>Erro interno do servidor</td>
+                        <td>Ocorreu um erro inesperado no servidor</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Exemplo de Resposta de Erro (400)</h3>
+            <div class="code-block">
+{
+  <span class="string">"error"</span>: <span class="string">"Email inválido"</span>
+}
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Limites e Restrições</h2>
+            <ul style="margin-left: 20px; color: #555;">
+                <li style="margin-bottom: 10px;">Não há limite de requisições por hora (uso responsável recomendado)</li>
+                <li style="margin-bottom: 10px;">URLs encurtadas via API são públicas e permanentes</li>
+                <li style="margin-bottom: 10px;">O código curto é gerado automaticamente com 6 caracteres aleatórios</li>
+                <li style="margin-bottom: 10px;">Para criar links com alias personalizados, você precisa se cadastrar e usar tokens</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Recursos Adicionais</h2>
+            <p>
+                <strong>Estatísticas de Cliques:</strong> Cada link encurtado possui uma página de estatísticas acessível através da <code>stats_url</code> retornada na resposta.
+            </p>
+            <p style="margin-top: 15px;">
+                <strong>Embeds Inteligentes:</strong> Todos os links encurtados possuem embeds otimizados para redes sociais com análise de confiabilidade automática.
+            </p>
+            <p style="margin-top: 15px;">
+                <strong>Painel de Controle:</strong> Para gerenciar seus links de forma mais completa, <a href="/register" style="color: #667eea;">cadastre-se gratuitamente</a> e acesse o dashboard.
+            </p>
+        </div>
+
+        <a href="/" class="back-link">← Voltar para a página inicial</a>
+    </div>
+</body>
+</html>

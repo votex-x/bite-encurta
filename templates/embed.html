@@ -10,23 +10,236 @@
     <meta property="og:description" content="{{ description }}">
     <meta property="og:url" content="{{ original_url }}">
     <meta property="og:type" content="website">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/667eea/ffffff?text=Bite+Encurta">
     
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ title }}">
     <meta name="twitter:description" content="{{ description }}">
+    <meta name="twitter:image" content="https://via.placeholder.com/1200x630/667eea/ffffff?text=Bite+Encurta">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>">
 
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; }
-        h1 { color: #007bff; }
-        p { color: #333; }
-        .preview-box { border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-top: 20px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .preview-container {
+            background: white;
+            max-width: 700px;
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .preview-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        .preview-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .preview-header .short-code {
+            font-size: 16px;
+            opacity: 0.9;
+            font-family: monospace;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        .preview-body {
+            padding: 35px;
+        }
+        .trust-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-weight: 500;
+            font-size: 16px;
+        }
+        .trust-icon {
+            font-size: 32px;
+            line-height: 1;
+        }
+        .trust-status.confiavel {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        .trust-status.suspeito {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        .trust-status.desconhecido {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+        .info-section {
+            margin-bottom: 25px;
+        }
+        .info-label {
+            font-size: 13px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .info-content {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.6;
+        }
+        .url-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 14px;
+            color: #667eea;
+            border: 2px solid #e0e0e0;
+        }
+        .redirect-button {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            margin-top: 25px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .redirect-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #999;
+            font-size: 13px;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #856404;
+        }
+        .warning-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
-    <div class="preview-box">
-        <h1>{{ title }}</h1>
-        <p>{{ description }}</p>
-        <p>Este é um preview para bots e crawlers. O link redireciona para: <a href="{{ original_url }}">{{ original_url }}</a></p>
+    <div class="preview-container">
+        <div class="preview-header">
+            <h1>🔗 Bite Encurta</h1>
+            <div class="short-code">{{ short_code }}</div>
+        </div>
+
+        <div class="preview-body">
+            <!-- Status de Confiabilidade -->
+            <div class="trust-status {{ trust_status }}">
+                {% if trust_status == 'confiavel' %}
+                    <div class="trust-icon">✅</div>
+                    <div>
+                        <strong>Site Confiável</strong><br>
+                        <small>Este link aponta para um domínio conhecido e confiável</small>
+                    </div>
+                {% elif trust_status == 'suspeito' %}
+                    <div class="trust-icon">⚠️</div>
+                    <div>
+                        <strong>Site Suspeito</strong><br>
+                        <small>Este link pode conter conteúdo suspeito. Prossiga com cautela.</small>
+                    </div>
+                {% else %}
+                    <div class="trust-icon">❓</div>
+                    <div>
+                        <strong>Site Desconhecido</strong><br>
+                        <small>Não temos informações sobre a confiabilidade deste site</small>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Título -->
+            <div class="info-section">
+                <div class="info-label">Título</div>
+                <div class="info-content">{{ title }}</div>
+            </div>
+
+            <!-- Descrição -->
+            <div class="info-section">
+                <div class="info-label">Descrição</div>
+                <div class="info-content">{{ description }}</div>
+            </div>
+
+            <!-- URL Original -->
+            <div class="info-section">
+                <div class="info-label">URL de Destino</div>
+                <div class="url-display">{{ original_url }}</div>
+            </div>
+
+            <!-- Aviso de Segurança para Sites Suspeitos -->
+            {% if trust_status == 'suspeito' %}
+            <div class="warning-box">
+                <strong>⚠️ Aviso de Segurança</strong>
+                Este link foi identificado como potencialmente suspeito. Verifique cuidadosamente a URL de destino antes de prosseguir.
+            </div>
+            {% endif %}
+
+            <!-- Botão de Redirecionamento -->
+            <a href="{{ original_url }}" class="redirect-button">
+                Acessar Link →
+            </a>
+        </div>
+
+        <div class="footer">
+            Encurtado com <a href="/">Bite Encurta</a> 🔗
+        </div>
     </div>
 </body>
 </html>
