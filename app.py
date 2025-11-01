@@ -91,6 +91,95 @@ def init_db():
             )
         """)
         
+        # --- Migração de Schema (Adicionar colunas se não existirem) ---
+        
+        # Adicionar premium_until à tabela users (se não existir)
+        try:
+            db.execute("SELECT premium_until FROM users LIMIT 1")
+        except sqlite3.OperationalError:
+            db.execute("ALTER TABLE users ADD COLUMN premium_until TIMESTAMP")
+            
+        # Adicionar user_id e created_via à tabela urls (se não existirem)
+        try:
+            db.execute("SELECT user_id, created_via FROM urls LIMIT 1")
+        except sqlite3.OperationalError:
+            try:
+                db.execute("ALTER TABLE urls ADD COLUMN user_id INTEGER")
+            except sqlite3.OperationalError:
+                pass # Coluna já existe
+            try:
+                db.execute("ALTER TABLE urls ADD COLUMN created_via TEXT DEFAULT 'web'")
+            except sqlite3.OperationalError:
+                pass # Coluna já existe
+                
+        db.commit()
+
+# Inicializa o banco de dados na primeira execução
+with app.app_context():
+    init_db()
+        
+        # Tabela urls
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS urls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                short_code TEXT UNIQUE NOT NULL,
+                original_url TEXT NOT NULL,
+                custom_alias TEXT,
+                token_used TEXT,
+                access_code TEXT UNIQUE NOT NULL,
+                click_count INTEGER DEFAULT 0,
+                user_id INTEGER,
+                created_via TEXT DEFAULT 'web',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        
+        # Tabela tokens
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS tokens (
+                token_value TEXT PRIMARY KEY,
+                token_type TEXT NOT NULL,
+                used INTEGER DEFAULT 0,
+                user_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        
+        # Tabela stats (para cliques)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url_id INTEGER NOT NULL,
+                ip_address TEXT,
+                user_agent TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (url_id) REFERENCES urls(id)
+            )
+        """)
+        
+        # --- Migração de Schema (Adicionar colunas se não existirem) ---
+        
+        # Adicionar premium_until à tabela users (se não existir)
+        try:
+            db.execute("SELECT premium_until FROM users LIMIT 1")
+        except sqlite3.OperationalError:
+            db.execute("ALTER TABLE users ADD COLUMN premium_until TIMESTAMP")
+            
+        # Adicionar user_id e created_via à tabela urls (se não existirem)
+        try:
+            db.execute("SELECT user_id, created_via FROM urls LIMIT 1")
+        except sqlite3.OperationalError:
+            try:
+                db.execute("ALTER TABLE urls ADD COLUMN user_id INTEGER")
+            except sqlite3.OperationalError:
+                pass # Coluna já existe
+            try:
+                db.execute("ALTER TABLE urls ADD COLUMN created_via TEXT DEFAULT 'web'")
+            except sqlite3.OperationalError:
+                pass # Coluna já existe
+                
         db.commit()
 
 # Inicializa o banco de dados na primeira execução
@@ -271,7 +360,7 @@ def shorten():
             return redirect(url_for('index'))
         
         # Verifica se o usuário é premium (tokens ilimitados)
-        is_premium = current_user.is_premium
+        is_premium = current_user.is_authenticated and current_user.is_premium
         
         if not is_premium and not token:
             flash('Para usar alias personalizado, você precisa de um token ou ser premium.', 'error')
