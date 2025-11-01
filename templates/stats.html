@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatísticas do Link: {{ stats.short_code }}</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; }
+        .stats-box { border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .stats-box p { margin: 5px 0; }
+        .stats-box strong { display: inline-block; width: 150px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Estatísticas do Link</h1>
+
+    <div class="stats-box">
+        <p><strong>Código Curto:</strong> {{ stats.short_code }}</p>
+        <p><strong>URL Original:</strong> <a href="{{ stats.original_url }}" target="_blank">{{ stats.original_url }}</a></p>
+        <p><strong>Total de Cliques:</strong> {{ stats.click_count }}</p>
+        <p><strong>Criado em:</strong> {{ stats.created_at }}</p>
+    </div>
+
+    <h2>Últimos Cliques (Máx. 10)</h2>
+    {% if stats.recent_clicks %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Endereço IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for click in stats.recent_clicks %}
+                <tr>
+                    <td>{{ click.timestamp }}</td>
+                    <td>{{ click.ip_address }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nenhum clique registrado ainda.</p>
+    {% endif %}
+
+    <p style="margin-top: 30px; text-align: center;"><a href="/">Voltar para a página inicial</a></p>
+</body>
+</html>

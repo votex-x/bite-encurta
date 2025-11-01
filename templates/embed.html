@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    
+    <!-- Metatags para Embeds (Open Graph e Twitter Card) -->
+    <meta property="og:title" content="{{ title }}">
+    <meta property="og:description" content="{{ description }}">
+    <meta property="og:url" content="{{ original_url }}">
+    <meta property="og:type" content="website">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ title }}">
+    <meta name="twitter:description" content="{{ description }}">
+
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; }
+        h1 { color: #007bff; }
+        p { color: #333; }
+        .preview-box { border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="preview-box">
+        <h1>{{ title }}</h1>
+        <p>{{ description }}</p>
+        <p>Este é um preview para bots e crawlers. O link redireciona para: <a href="{{ original_url }}">{{ original_url }}</a></p>
+    </div>
+</body>
+</html>
