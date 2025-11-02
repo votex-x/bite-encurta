@@ -223,6 +223,30 @@
             text-align: center;
             border: 2px solid #ff9800;
         }
+        .stats-card {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-item {
+            flex: 1;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center;
+            border-left: 5px solid #667eea;
+        }
+        .stat-item h3 {
+            font-size: 32px;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .stat-item p {
+            color: #555;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -232,9 +256,8 @@
             <div class="header-right">
                 <span>{{ current_user.email }}</span>
                 {% if current_user.is_admin %}
-                    <a href="/admin" class="btn btn-secondary">Painel Admin</a>
+                    <a href="/admin/users" class="btn btn-secondary">Painel Admin</a>
                 {% endif %}
-                <a href="/api/docs" class="btn btn-secondary">API Docs</a>
                 <a href="/logout" class="btn btn-primary">Sair</a>
             </div>
         </div>
@@ -249,107 +272,53 @@
             {% endif %}
         {% endwith %}
 
-        {% if current_user.is_premium %}
-            <div class="premium-status">
-                👑 Você é um usuário **PREMIUM**! Tokens ilimitados até {{ current_user.premium_until }}.
+        <div class="stats-card">
+            <div class="stat-item">
+                <h3>{{ total_links }}</h3>
+                <p>Links Criados</p>
             </div>
-        {% endif %}
+            <div class="stat-item">
+                <h3>{{ total_clicks }}</h3>
+                <p>Cliques Totais</p>
+            </div>
+        </div>
 
         <div class="card">
-            <h2>Encurtar com Alias Personalizado</h2>
-            <p style="margin-bottom: 15px; color: #555;">
-                {% if current_user.is_premium %}
-                    Como usuário Premium, você pode usar alias personalizado sem tokens!
-                {% else %}
-                    Para usar alias personalizado, você precisa de um token disponível.
-                {% endif %}
-            </p>
-            <form action="/shorten" method="post">
+            <h2>Encurtar Novo Link</h2>
+            <form action="{{ url_for('shorten') }}" method="post">
                 <div class="form-group">
                     <label for="original_url">URL Original:</label>
                     <input type="url" id="original_url" name="original_url" required placeholder="https://exemplo.com.br/sua-url-longa">
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="custom_alias">Alias Personalizado (Obrigatório para esta seção):</label>
-                        <input type="text" id="custom_alias" name="custom_alias" required placeholder="meulink">
-                    </div>
-
-                    {% if not current_user.is_premium %}
-                    <div class="form-group">
-                        <label for="token">Token Premium (Obrigatório):</label>
-                        <input type="text" id="token" name="token" required placeholder="Cole seu token aqui">
-                    </div>
-                    {% endif %}
+                <div class="form-group">
+                    <label for="custom_alias">Alias Personalizado (Opcional):</label>
+                    <input type="text" id="custom_alias" name="custom_alias" placeholder="meulink">
                 </div>
 
-                <input type="submit" value="Encurtar Link Personalizado">
+                <input type="submit" value="Encurtar Link">
             </form>
         </div>
-
-        {% if not current_user.is_premium %}
-        <div class="card">
-            <h2>Meus Tokens</h2>
-            
-            <form action="/dashboard/generate_token" method="post" class="generate-token-form">
-                <input type="submit" value="+ Gerar Novo Token" class="btn btn-primary">
-            </form>
-
-            {% if tokens %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Token</th>
-                            <th>Status</th>
-                            <th>Criado em</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for token in tokens %}
-                        <tr>
-                            <td><div class="token-display">{{ token.token_value }}</div></td>
-                            <td>
-                                {% if token.used %}
-                                    <span class="badge badge-warning">Usado</span>
-                                {% else %}
-                                    <span class="badge badge-success">Disponível</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ token.created_at }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div class="empty-state">
-                    <div class="empty-state-icon">🎫</div>
-                    <p>Você ainda não tem tokens. Gere um token para criar links personalizados!</p>
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
 
         <div class="card">
             <h2>Meus Links Encurtados</h2>
             
-            {% if links %}
+            {% if user_links %}
                 <table>
                     <thead>
                         <tr>
-                            <th>Código</th>
+                            <th>Link Curto</th>
                             <th>URL Original</th>
                             <th>Cliques</th>
                             <th>Criado em</th>
-                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for link in links %}
+                        {% for link in user_links %}
                         <tr>
                             <td>
-                                <a href="/{{ link.short_code }}" target="_blank" class="link-url">
-                                    {{ link.short_code }}
+                                <a href="{{ url_for('redirect_to_url', short_code=link.short_code) }}" target="_blank" class="link-url">
+                                    {{ request.url_root }}{{ link.short_code }}
                                 </a>
                             </td>
                             <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -357,11 +326,6 @@
                             </td>
                             <td>{{ link.click_count }}</td>
                             <td>{{ link.created_at }}</td>
-                            <td>
-                                <a href="/stats/{{ link.access_code }}" target="_blank" class="link-url">
-                                    Ver Estatísticas
-                                </a>
-                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

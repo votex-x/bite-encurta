@@ -228,4 +228,165 @@ def login():
         return redirect(url_for('dashboard'))
     return render_template('login.html')
 
-# ... resto igual ao atual ...
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash('Você foi desconectado.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    db = get_db()
+    # Busca os links criados pelo usuário logado
+    user_links = db.execute(
+        "SELECT short_code, original_url, click_count, created_at FROM urls WHERE user_id = ? ORDER BY created_at DESC",
+        (current_user.id,)
+    ).fetchall()
+    
+    # Calcula o total de cliques
+    total_clicks = sum(link['click_count'] for link in user_links)
+    
+    # Busca o total de links criados
+    total_links = len(user_links)
+
+    return render_template(
+        'dashboard.html',
+        user_links=user_links,
+        total_clicks=total_clicks,
+        total_links=total_links
+    )
+
+# --- Rotas de Encurtamento ---
+@app.route('/shorten', methods=['POST'])
+@login_required
+def shorten():
+    original_url = request.form.get('original_url')
+    custom_alias = request.form.get('custom_alias')
+    
+    if not original_url:
+        flash('URL original é obrigatória.', 'error')
+        return redirect(url_for('dashboard'))
+
+    # Validação básica de URL
+    if not (original_url.startswith('http://') or original_url.startswith('https://')):
+        original_url = 'http://' + original_url
+
+    db = get_db()
+    short_code = None
+    
+    if custom_alias:
+        # Verifica se o alias personalizado já existe
+        existing_url = db.execute("SELECT id FROM urls WHERE short_code = ?", (custom_alias,)).fetchone()
+        if existing_url:
+            flash('Alias personalizado já está em uso.', 'error')
+            return redirect(url_for('dashboard'))
+        short_code = custom_alias
+    else:
+        # Gera um código curto único
+        while True:
+            short_code = generate_short_code()
+            existing_url = db.execute("SELECT id FROM urls WHERE short_code = ?", (short_code,)).fetchone()
+            if not existing_url:
+                break
+
+    # Gera o código de acesso (para edição/deleção)
+    access_code = generate_access_code()
+
+    try:
+        db.execute(
+            "INSERT INTO urls (short_code, original_url, access_code, user_id, custom_alias) VALUES (?, ?, ?, ?, ?)",
+            (short_code, original_url, access_code, current_user.id, custom_alias)
+        )
+        db.commit()
+        flash(f'Link encurtado com sucesso! Seu link: {request.url_root}{short_code}', 'success')
+    except sqlite3.IntegrityError:
+        flash('Erro ao encurtar o link. Tente novamente.', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+# --- Rota de Redirecionamento ---
+@app.route('/<short_code>')
+def redirect_to_url(short_code):
+    db = get_db()
+    url_row = db.execute("SELECT * FROM urls WHERE short_code = ?", (short_code,)).fetchone()
+    
+    if url_row:
+        # Incrementa o contador de cliques
+        db.execute("UPDATE urls SET click_count = click_count + 1 WHERE id = ?", (url_row['id'],))
+        
+        # Registra o clique na tabela stats
+        ip_address = request.remote_addr
+        user_agent = request.headers.get('User-Agent')
+        db.execute(
+            "INSERT INTO stats (url_id, ip_address, user_agent) VALUES (?, ?, ?)",
+            (url_row['id'], ip_address, user_agent)
+        )
+        db.commit()
+        
+        return redirect(url_row['original_url'])
+    else:
+        # Se o código curto não for encontrado, retorna 404
+        return abort(404)
+
+# --- Rotas de API (Exemplo) ---
+@app.route('/api/v1/shorten', methods=['POST'])
+def api_shorten():
+    data = request.get_json()
+    original_url = data.get('url')
+    token = data.get('token')
+    
+    if not original_url or not token:
+        return jsonify({'error': 'URL e token são obrigatórios'}), 400
+
+    db = get_db()
+    token_row = db.execute("SELECT * FROM tokens WHERE token_value = ? AND used = 0", (token,)).fetchone()
+    
+    if not token_row:
+        return jsonify({'error': 'Token inválido ou já utilizado'}), 401
+
+    # Marca o token como usado
+    db.execute("UPDATE tokens SET used = 1 WHERE token_value = ?", (token,))
+    
+    # Associa o link ao usuário do token, se houver
+    user_id = token_row['user_id']
+    
+    # Lógica de encurtamento (simplificada para a API)
+    short_code = generate_short_code()
+    access_code = generate_access_code()
+    
+    try:
+        db.execute(
+            "INSERT INTO urls (short_code, original_url, access_code, user_id, token_used, created_via) VALUES (?, ?, ?, ?, ?, ?)",
+            (short_code, original_url, access_code, user_id, token, 'api')
+        )
+        db.commit()
+        
+        return jsonify({
+            'short_url': f'{request.url_root}{short_code}',
+            'original_url': original_url,
+            'access_code': access_code
+        }), 201
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Erro interno ao criar o link curto'}), 500
+
+# --- Rotas de Administração (Exemplo) ---
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    if not current_user.is_admin:
+        flash('Acesso negado.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    db = get_db()
+    users = db.execute("SELECT id, email, is_admin, premium_until, created_at FROM users").fetchall()
+    
+    return render_template('admin_users.html', users=users)
+
+# --- Rotas de Erro ---
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+if __name__ == '__main__':
+    app.run(debug=True)
