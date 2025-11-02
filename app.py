@@ -197,6 +197,11 @@ def fetch_url_metadata(url):
             'description': f'Redireciona para: {url}'
         }
 
+# --- Rotas Principais ---
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 # --- Rotas de Autenticação (Simplificada - Apenas Email) ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
